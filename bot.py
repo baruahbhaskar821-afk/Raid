@@ -14,22 +14,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ================= CONFIG =================
-# Use environment variables for Render
 API_ID = int(os.environ.get("API_ID", 12345678))
 API_HASH = os.environ.get("API_HASH", "YOUR_API_HASH")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN")
-
-# Owner ID (can be set via environment variable)
 OWNER_ID = int(os.environ.get("OWNER_ID", 123456789))
 
 # ==========================================
+
+# Fix for Python 3.14 - Create event loop policy
+try:
+    asyncio.get_event_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
 
 app = Client(
     "FastBot",
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN,
-    workers=100,  # More workers for better performance
+    workers=100,
     parse_mode="html"
 )
 
@@ -38,11 +41,10 @@ sudo_users = {OWNER_ID}
 
 # ===== RAID SYSTEM =====
 raid_tasks = {}
-raid_lock = asyncio.Lock()
 
 # ===== CUSTOM LINES =====
 custom_lines = [
-  
+    
     "🔥 teri mummy ki chut!",
     "⚡ bahen k lode teri dadi ki black hairy pussy",
     "🚀 teri mummy ko ulta ltkakr taangduga aur uski chut maruga!",
@@ -157,11 +159,8 @@ custom_lines = [
     "𝑻𝑬𝑹𝑬 𝑫𝑨𝑫𝑨 𝑲𝑨 𝑶𝑵𝑳𝒀𝑭𝑨𝑵𝑺 𝑳𝑰𝑽𝑬 𝑲𝑨𝑹 𝑫𝑼𝑵𝑮𝑨",
     "𝑻𝑬𝑹𝑬 𝑫𝑨𝑫𝑨 𝑲𝑶 𝒁𝑰𝑷 𝑭𝑰𝑳𝑬 𝑴𝑬 𝑪𝑶𝑴𝑷𝑹𝑬𝑺𝑺 𝑲𝑨𝑹 𝑫𝑼𝑵𝑮𝑨",
     "𝑻𝑬𝑹𝑬 𝑫𝑨𝑫𝑨 𝑲𝑬 𝑩𝑯𝑶𝑺𝑫𝑬 𝑴𝑬 𝑷𝒀𝑻𝑯𝑶𝑵 𝑹𝑼𝑵 𝑲𝑨𝑹 𝑫𝑼𝑵𝑮𝑨",
-    # YAHAN APNI CUSTOM LINES ADD KARO
 ]
 
-# ==========================================
-# START MESSAGE
 # ==========================================
 
 @app.on_message(filters.private & filters.command(["start", "help"], prefixes=["/", "."]))
@@ -193,8 +192,6 @@ async def start_cmd(client, message: Message):
         logger.error(f"Error in start_cmd: {e}")
 
 # ==========================================
-# SUDO CHECK
-# ==========================================
 
 def is_sudo(user_id):
     return user_id in sudo_users
@@ -206,42 +203,33 @@ async def sudo_error(message):
         logger.error(f"Error in sudo_error: {e}")
 
 # ==========================================
-# ALIVE
-# ==========================================
 
 @app.on_message(filters.command("alive", prefixes="."))
 async def alive_cmd(client, message: Message):
     if not is_sudo(message.from_user.id):
         return await sudo_error(message)
-    
     try:
         await message.reply_text("✅ <b>BOT IS ALIVE AND READY</b> ✅")
     except Exception as e:
         logger.error(f"Error in alive_cmd: {e}")
 
 # ==========================================
-# SPEED
-# ==========================================
 
 @app.on_message(filters.command("speed", prefixes="."))
 async def speed_cmd(client, message: Message):
     if not is_sudo(message.from_user.id):
         return await sudo_error(message)
-    
     try:
         await message.reply_text("⚡ <b>SUPER FAST BOT</b> ⚡")
     except Exception as e:
         logger.error(f"Error in speed_cmd: {e}")
 
 # ==========================================
-# PING
-# ==========================================
 
 @app.on_message(filters.command("ping", prefixes="."))
 async def ping_cmd(client, message: Message):
     if not is_sudo(message.from_user.id):
         return await sudo_error(message)
-    
     try:
         start = time.time()
         msg = await message.reply_text("🏓 <b>Pinging...</b>")
@@ -252,21 +240,16 @@ async def ping_cmd(client, message: Message):
         logger.error(f"Error in ping_cmd: {e}")
 
 # ==========================================
-# ADD SUDO
-# ==========================================
 
 @app.on_message(filters.command("add", prefixes="."))
 async def add_sudo(client, message: Message):
     if message.from_user.id != OWNER_ID:
         return
-    
     try:
         if not message.reply_to_message:
             return await message.reply_text("❌ <b>Kisi ko reply karke .add karo</b> ❌")
-        
         user_id = message.reply_to_message.from_user.id
         user_name = message.reply_to_message.from_user.first_name
-        
         sudo_users.add(user_id)
         await message.reply_text(f"✅ <b>{user_name}</b> <b>ADDED IN SUDO</b> ✅")
         logger.info(f"User {user_id} added to sudo by owner")
@@ -274,114 +257,83 @@ async def add_sudo(client, message: Message):
         logger.error(f"Error in add_sudo: {e}")
 
 # ==========================================
-# DELETE SUDO
-# ==========================================
 
 @app.on_message(filters.command("del", prefixes="."))
 async def del_sudo(client, message: Message):
     if message.from_user.id != OWNER_ID:
         return
-    
     try:
         if not message.reply_to_message:
             return await message.reply_text("❌ <b>Kisi ko reply karke .del karo</b> ❌")
-        
         user_id = message.reply_to_message.from_user.id
         user_name = message.reply_to_message.from_user.first_name
-        
         if user_id in sudo_users:
             sudo_users.remove(user_id)
-        
         await message.reply_text(f"❌ <b>{user_name}</b> <b>REMOVED FROM SUDO</b> ❌")
         logger.info(f"User {user_id} removed from sudo by owner")
     except Exception as e:
         logger.error(f"Error in del_sudo: {e}")
 
 # ==========================================
-# RAID
-# ==========================================
 
 @app.on_message(filters.command("r", prefixes="."))
 async def raid_cmd(client, message: Message):
     if not is_sudo(message.from_user.id):
         return await sudo_error(message)
-    
     try:
         args = message.text.split()
-        
         if len(args) < 2:
             return await message.reply_text("❌ <b>USE : .r 5</b> ❌")
-        
         if not message.reply_to_message:
             return await message.reply_text("❌ <b>SIR KISI KO TAG KARO</b> ❌")
-        
         try:
             count = int(args[1])
-            if count <= 0 or count > 500:  # Limit raids to 500 messages max
+            if count <= 0 or count > 500:
                 return await message.reply_text("❌ <b>NUMBER 1-500 KE BEECH MEIN DO</b> ❌")
         except ValueError:
             return await message.reply_text("❌ <b>VALID NUMBER DO</b> ❌")
-        
         target = message.reply_to_message.from_user
         mention = target.mention
         chat_id = message.chat.id
-        
-        # Stop any existing raid in this chat
         raid_tasks[chat_id] = False
         await asyncio.sleep(0.5)
-        
         raid_tasks[chat_id] = True
-        
         raid_msg = await message.reply_text(f"🚀 <b>RAID STARTED ON {mention}</b> 🚀\n<b>COUNT:</b> <code>{count}</code>")
-        
         for i in range(count):
             if not raid_tasks.get(chat_id):
                 break
-            
             try:
                 line = custom_lines[i % len(custom_lines)]
                 await message.reply_text(f"{mention} {line}")
-                
-                # Small delay to avoid flood wait
                 await asyncio.sleep(0.5)
-                
             except FloodWait as e:
                 logger.warning(f"Flood wait for {e.x} seconds")
                 await asyncio.sleep(e.x)
             except Exception as e:
                 logger.error(f"Error in raid loop: {e}")
                 continue
-        
         raid_tasks[chat_id] = False
         await raid_msg.edit_text(f"✅ <b>RAID COMPLETED ON {mention}</b> ✅")
-        
     except Exception as e:
         logger.error(f"Error in raid_cmd: {e}")
         await message.reply_text(f"❌ <b>ERROR:</b> <code>{str(e)[:100]}</code> ❌")
 
-# ==========================================
-# STOP RAID
 # ==========================================
 
 @app.on_message(filters.command("stopr", prefixes="."))
 async def stop_raid(client, message: Message):
     if not is_sudo(message.from_user.id):
         return await sudo_error(message)
-    
     try:
         chat_id = message.chat.id
-        
         if chat_id in raid_tasks and raid_tasks[chat_id]:
             raid_tasks[chat_id] = False
             await message.reply_text("✅ <b>RAID STOPPED SUCCESSFULLY</b> ✅")
         else:
             await message.reply_text("⚠️ <b>NO ACTIVE RAID IN THIS CHAT</b> ⚠️")
-            
     except Exception as e:
         logger.error(f"Error in stop_raid: {e}")
 
-# ==========================================
-# ERROR HANDLER
 # ==========================================
 
 @app.on_error()
@@ -389,47 +341,11 @@ async def error_handler(client, update, error):
     logger.error(f"Error occurred: {error}")
 
 # ==========================================
-# HEALTH CHECK FOR RENDER
-# ==========================================
-
-# Simple HTTP server for health checks on Render
-try:
-    from aiohttp import web
-    
-    async def health_check(request):
-        return web.Response(text="Bot is alive!")
-    
-    async def start_http_server():
-        app_web = web.Application()
-        app_web.router.add_get('/', health_check)
-        runner = web.AppRunner(app_web)
-        await runner.setup()
-        port = int(os.environ.get("PORT", 8080))
-        site = web.TCPSite(runner, '0.0.0.0', port)
-        await site.start()
-        logger.info(f"HTTP server started on port {port}")
-        
-except ImportError:
-    logger.warning("aiohttp not installed, health check disabled")
-    # Create a simple HTTP server using asyncio if aiohttp not available
-    async def start_http_server():
-        port = int(os.environ.get("PORT", 8080))
-        logger.info(f"HTTP server would start on port {port} but aiohttp not installed")
-
-# ==========================================
-# RUN BOT
-# ==========================================
 
 async def main():
-    # Start HTTP server for health checks (for Render)
-    await start_http_server()
-    
-    # Start the bot
     logger.info("Starting bot...")
     await app.start()
     logger.info("Bot started successfully!")
-    
-    # Keep the bot running
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
